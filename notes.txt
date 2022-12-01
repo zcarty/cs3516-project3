@@ -1,0 +1,17 @@
+We write the IPv4 and UDP header
+	IPv4:
+		when saying from: and to:, use overlay addresses instead of real
+	UDP:
+		source
+		destination
+		
+Router looks up dest IP,
+	in forwarding table (trie)
+	figures out which router to send to:
+	sendto(router_ip)
+	**(automatic) rewrite header with source router as source ip 
+	
+do we use the ip addresses in the config file or can we slightly alter them
+
+same exe for router or endpoint
+w/cmd line args
