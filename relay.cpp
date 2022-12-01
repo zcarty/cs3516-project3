@@ -31,7 +31,9 @@ int main(int argc, char** argv) {
     unsigned long h1 = adr1.s_addr;
     unsigned long h2 = adr2.s_addr;
 
+    cout << "Creating socket...";
     int socket = create_cs3516_socket();
+    cout << "done." << endl;
     // int flags = fcntl(socket, F_GETFL, 0);
     // fcntl(socket, F_SETFL, (flags | O_NONBLOCK));
 
@@ -62,10 +64,15 @@ int main(int argc, char** argv) {
         memcpy((SRC_BUFF+sizeof(struct ip)+sizeof(struct udphdr)), message, sizeof(message));
 
         printf("Sender designation made successfully.\n");
+        cout << "Sending packet...";
         cs3516_send(socket, SRC_BUFF, iphead.ip_len, h2);
+        cout << "done." << endl;
+
     } else if(strcmp(argv[1],"2") == 0) {
         printf("Receiver designation made successfully.\n");
+        printf("Listening for packet...");
         int bytes_recvd = cs3516_recv(socket, SRC_BUFF, (sizeof(SRC_BUFF)-1));
+        cout << "done." << endl;
         struct ip iphead;
         struct udphdr udphead;
         memcpy(&iphead, SRC_BUFF, sizeof(struct ip));
