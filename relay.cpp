@@ -37,6 +37,35 @@ int main(int argc, char** argv) {
     // int flags = fcntl(socket, F_GETFL, 0);
     // fcntl(socket, F_SETFL, (flags | O_NONBLOCK));
 
+
+
+
+    // run the file with cmd args (1 for router, 2 for end host)
+    /* end host:
+    when run:
+    search for send_config.txt:
+    destIP(overlay) sourcePort destPort
+    search for send_body.txt:
+    divide the body into 1000 byte payloads and send to router
+
+    when receiving:
+    write stats to received_stats.txt
+    write contents to file called received
+    print to stdout size of transmitted file, # of packets transmitted
+                    size of received file, # of packets received
+    */
+
+    /* router:
+    
+    // Creates Trie structure from config file (do in relay.cpp)
+    call lookup function, which takes a destIP (overlay) and forwarding table returns new destIP(real)
+
+    write to log file (ROUTER_control.txt)
+    UNIXTIME SOURCE_OVERLAY_IP DEST_OVERLAY_IP IP_IDENT STATUS_CODE [NEXT_HOP]
+    */
+
+
+
     // FOR TESTING PURPOSES
     if(strcmp(argv[1],"1") == 0) {
         struct ip iphead;
