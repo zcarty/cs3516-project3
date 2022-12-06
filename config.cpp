@@ -18,30 +18,31 @@ fromConfig config(int nodeID) {
     
     // Deal with config.txt
     string buff;
-    ifstream configFile("config.txt");
+    ifstream configFile;
+    configFile.open("config.txt");
     
     // LINE 1
     int step;
     getline(configFile, buff);
-    sscanf(buff.c_str(), "%d %d %d", step, out.queueLength, out.TTLVal);
+    sscanf(buff.c_str(), "%d %d %d", &step, &out.queueLength, &out.TTLVal);
 
     // LINES 2-4
-    int setupNode = 0;
-    string ip_buff;
+    int setupNode;
+    char *ip_buff;
     for(int i = 0; i < 2; i++){
         getline(configFile, buff);
-        sscanf(buff.c_str(), "%d %d %s", step, setupNode, ip_buff);
+        sscanf(buff.c_str(), "%d %d", &step, &setupNode);
         if (setupNode == nodeID) {
-            out.ip_host = ip_buff;
+            out.ip_host = buff.substr(4);
         }
     }
 
     // LINES 5-7
-    string ip_buff2;
+    char *ip_buff2;
     for(int i = 0; i < 3; i++){
         getline(configFile, buff);
-        sscanf(buff.c_str(), "%d %d %s %s", step, setupNode, ip_buff, ip_buff2);
-        if (setupNode == nodeID) {
+        sscanf(buff.c_str(), "%d %d", step, setupNode);
+        if (setupNode[0] == nodeID) {
             out.ip_host = ip_buff;
             out.ip_overlay = ip_buff2;
         }
@@ -62,8 +63,8 @@ fromConfig config(int nodeID) {
     // }
 
     // LINES 11-13
-    
 
 
+    configFile.close();
     return out;
 }

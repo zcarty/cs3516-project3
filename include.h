@@ -8,5 +8,6 @@
 #include <netinet/udp.h>
 #include <netinet/if_ether.h>
 #include <arpa/inet.h>
+#include <cstring>
 #include <string>
 #include <fstream>
