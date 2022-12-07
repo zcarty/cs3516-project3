@@ -4,6 +4,19 @@ Creates an overlay network with following features:
  Create appropriate headers
  Packet forwarding, queuing, and TTL processing
 
+End-Hosts:
+host1 (8114) 10.63.30.1
+host2 (8115) 10.63.30.2
+host3 (8116) 10.63.30.3
+
+Routers:
+host4 (8117) 10.63.30.4, 10.63.30.5, 10.63.30.6
+
+
+To Use: (set up routers first on host4, then end-hosts)
+run 'make clean'
+run 'make relay'
+run './relay <NODEID>' (making sure the config.txt and other required files are present in directory)
 
  todo:
  set up vms with files and ips
