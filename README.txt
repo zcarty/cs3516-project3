@@ -4,6 +4,8 @@ Creates an overlay network with following features:
  Create appropriate headers
  Packet forwarding, queuing, and TTL processing
 
+ Currently we have checkpoint numbers 1,2,3 and 7 completed
+
 End-Hosts:
 host1 (8114) 10.63.30.1
 host2 (8115) 10.63.30.2
