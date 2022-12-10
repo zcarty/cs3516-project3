@@ -15,3 +15,18 @@ do we use the ip addresses in the config file or can we slightly alter them
 
 same exe for router or endpoint
 w/cmd line args
+
+in rec loop:
+	ip_header-> ttl--;
+	if ttl < 1 {
+	drop the packet
+	}
+
+make a enqueue function:
+	if packet > queue length:
+		drop the packet
+	Add delay for sending a packet
+	
+create socket s_addr change for multiple ips on one vm
+
+make a while loop to check contents of the endhost file 

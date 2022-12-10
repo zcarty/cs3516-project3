@@ -1,5 +1,6 @@
 /* Sets all vars for configuration*/
 #include "include.h"
+#include "router.cpp"
 using namespace std;
 
 
@@ -10,6 +11,8 @@ struct fromConfig {
     string ip_host;
     string ip_overlay;
     int delay[7];
+    int type = 1;
+    TrieNode root;
 };
 
 fromConfig config(int nodeID) {
@@ -20,6 +23,11 @@ fromConfig config(int nodeID) {
     ifstream configFile;
     configFile.open("config.txt");
     
+    if (nodeID == 4 || nodeID == 5 || nodeID == 6)
+    {
+        out.type = 2; // End-Host
+    }
+
     // LINE 1
     int step;
     getline(configFile, buff);
@@ -44,6 +52,10 @@ fromConfig config(int nodeID) {
         if (setupNode == nodeID) {
             out.ip_host = buff.substr(4,10);
             out.ip_overlay = buff.substr(15);
+        }
+        // Creates Trie Structure
+        else if (out.type == 1) {
+            insertNode(&out.root, buff.substr(15), buff.substr(4,10));
         }
     }
 

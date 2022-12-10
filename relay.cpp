@@ -1,6 +1,5 @@
 #include "include.h"
 #include "cs3516sock.h"
-#include "router.cpp"
 #include "config.cpp"
 using namespace std;
 
@@ -16,8 +15,52 @@ using namespace std;
 /** MAIN FUNCTION **/
 int main(int argc, char **argv)
 {
-    int nodeID = int(argv[1] - '0'); //convert nodeID to int
+    int nodeID = int(argv[1] - '0'); // convert nodeID to int
     fromConfig data = config(nodeID);
+
+    // run the file with cmd args (nodeID)
+    if (data.type == 1) // Router
+    {
+
+        /* router:
+create socket s_addr change for multiple ips on one vm
+
+    
+    call lookup function, which takes a destIP (overlay) and forwarding table returns new destIP(real)
+    in rec loop:
+	ip_header-> ttl--;
+	if ttl < 1 {
+	drop the packet
+	}
+
+make a enqueue function:
+	if packet > queue length:
+		drop the packet
+	Add delay for sending a packet
+
+    write to log file (ROUTER_control.txt)
+    UNIXTIME SOURCE_OVERLAY_IP DEST_OVERLAY_IP IP_IDENT STATUS_CODE [NEXT_HOP]
+    */
+    }
+
+    else // End Host
+    {
+        /* end host:
+when run:
+search for send_config.txt:
+destIP(overlay) sourcePort destPort
+search for send_body.txt:
+divide the body into 1000 byte payloads and send to router
+
+when receiving:
+write stats to received_stats.txt
+write contents to file called received
+print to stdout size of transmitted file, # of packets transmitted
+             size of received file, # of packets received
+
+make a while loop to check contents of the endhost file (use select)
+*/
+    }
 
     // defining buffers
     char SRC_BUFF[1001]; // additional byte to allow for space for null terminator
@@ -41,30 +84,6 @@ int main(int argc, char **argv)
     cout << "done." << endl;
     // int flags = fcntl(socket, F_GETFL, 0);
     // fcntl(socket, F_SETFL, (flags | O_NONBLOCK));
-
-    // run the file with cmd args (1 for router, 2 for end host)
-    /* end host:
-    when run:
-    search for send_config.txt:
-    destIP(overlay) sourcePort destPort
-    search for send_body.txt:
-    divide the body into 1000 byte payloads and send to router
-
-    when receiving:
-    write stats to received_stats.txt
-    write contents to file called received
-    print to stdout size of transmitted file, # of packets transmitted
-                    size of received file, # of packets received
-    */
-
-    /* router:
-
-    // Creates Trie structure from config file (do in relay.cpp)
-    call lookup function, which takes a destIP (overlay) and forwarding table returns new destIP(real)
-
-    write to log file (ROUTER_control.txt)
-    UNIXTIME SOURCE_OVERLAY_IP DEST_OVERLAY_IP IP_IDENT STATUS_CODE [NEXT_HOP]
-    */
 
     // FOR TESTING PURPOSES
     if (strcmp(argv[1], "1") == 0)
