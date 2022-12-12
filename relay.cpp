@@ -37,20 +37,31 @@ int main(int argc, char **argv)
         while(1){
             // First receive file size
             cs3516_recv(socket, SRC_BUFF, sizeof(SRC_BUFF));
+            int filesize = atoi(SRC_BUFF);
+            int packet_num = (filesize / 1000) + 1;
+            char PACKET_BUFF[filesize];
+
+            // Recieve packet use select with timeout
+            for(int i; i < packet_num; i++)
+            {
+                cs3516_recv(socket, PAY_BUFF, sizeof(PAY_BUFF));
+               // PACKET_BUFF 
+            // ip_header-> ttl--;
+            // if ttl < 1 {
+            // drop the packet
+            // }
+            }
+
+            // Forward packet to nextIP
+           // string nextIP = searchTrie(&data.root, );
+            for(int i; i < packet_num; i++)
+            {
+               // cs3516_send(socket, , , nextIP);
+            }
 
         }
         /* router:
             call lookup function, which takes a destIP (overlay) and forwarding table returns new destIP(real)
-            in rec loop:
-            ip_header-> ttl--;
-            if ttl < 1 {
-            drop the packet
-            }
-
-        make a enqueue function:
-            if packet > queue length:
-                drop the packet
-            Add delay for sending a packet
 
             write to log file (ROUTER_control.txt)
             UNIXTIME SOURCE_OVERLAY_IP DEST_OVERLAY_IP IP_IDENT STATUS_CODE [NEXT_HOP]

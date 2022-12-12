@@ -57,7 +57,7 @@ int cs3516_recv(int sock, char *buffer, int buff_size) {
     return n;
 }
 
-int cs3516_send(int sock, char *buffer, int buff_size, unsigned long nextIP) {
+int cs3516_send(int sock, char *buffer, int buff_size, string nextIP) {
     struct sockaddr_in to;
     int tolen, n;
 
@@ -67,7 +67,7 @@ int cs3516_send(int sock, char *buffer, int buff_size, unsigned long nextIP) {
     bzero(&to, sizeof(to));
     to.sin_family = AF_INET;
     to.sin_port = htons(MYPORT);
-    to.sin_addr.s_addr = nextIP;
+    to.sin_addr.s_addr = inet_addr(nextIP.c_str());
 
     // We can now send to this destination:
     n = sendto(sock, buffer, buff_size, 0,
