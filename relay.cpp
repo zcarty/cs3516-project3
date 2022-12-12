@@ -18,54 +18,66 @@ int main(int argc, char **argv)
     int nodeID = int(argv[1] - '0'); // convert nodeID to int
     fromConfig data = config(nodeID);
 
+    int socket = 0;
+    // defining buffers
+    char SRC_BUFF[1001]; // additional byte to allow for space for null terminator
+    char PAY_BUFF[1001]; // payload buffer, size can be adjusted later
+    char ERR_BUFF[1001];
+
     // run the file with cmd args (nodeID)
     if (data.type == 1) // Router
     {
+        // create socket s_addr change for multiple ips on one vm
+        cout << "Creating socket...";
+        socket = create_cs3516_socket(data.ip_host);
+        cout << "done." << endl;
+        
 
+        
+        while(1){
+            // First receive file size
+            cs3516_recv(socket, SRC_BUFF, sizeof(SRC_BUFF));
+
+        }
         /* router:
-create socket s_addr change for multiple ips on one vm
+            call lookup function, which takes a destIP (overlay) and forwarding table returns new destIP(real)
+            in rec loop:
+            ip_header-> ttl--;
+            if ttl < 1 {
+            drop the packet
+            }
 
-    
-    call lookup function, which takes a destIP (overlay) and forwarding table returns new destIP(real)
-    in rec loop:
-	ip_header-> ttl--;
-	if ttl < 1 {
-	drop the packet
-	}
+        make a enqueue function:
+            if packet > queue length:
+                drop the packet
+            Add delay for sending a packet
 
-make a enqueue function:
-	if packet > queue length:
-		drop the packet
-	Add delay for sending a packet
-
-    write to log file (ROUTER_control.txt)
-    UNIXTIME SOURCE_OVERLAY_IP DEST_OVERLAY_IP IP_IDENT STATUS_CODE [NEXT_HOP]
+            write to log file (ROUTER_control.txt)
+            UNIXTIME SOURCE_OVERLAY_IP DEST_OVERLAY_IP IP_IDENT STATUS_CODE [NEXT_HOP]
     */
     }
 
     else // End Host
     {
         /* end host:
-when run:
-search for send_config.txt:
-destIP(overlay) sourcePort destPort
-search for send_body.txt:
-divide the body into 1000 byte payloads and send to router
+            when run:
+            search for send_config.txt:
+            destIP(overlay) sourcePort destPort
+            search for send_body.txt:
+            send file size, then
+            divide the body into 1000 byte payloads and send to router
 
-when receiving:
-write stats to received_stats.txt
-write contents to file called received
-print to stdout size of transmitted file, # of packets transmitted
-             size of received file, # of packets received
+            when receiving:
+            write stats to received_stats.txt
+            write contents to file called received
+            print to stdout size of transmitted file, # of packets transmitted
+                        size of received file, # of packets received
 
-make a while loop to check contents of the endhost file (use select)
-*/
+            make a while loop to check contents of the endhost file (use select)
+        */
     }
 
-    // defining buffers
-    char SRC_BUFF[1001]; // additional byte to allow for space for null terminator
-    char PAY_BUFF[1001]; // payload buffer, size can be adjusted later
-    char ERR_BUFF[1001];
+
     // predefine host and router ips, this should change in the future if my assumptions are correct
     struct in_addr adr1;
     struct in_addr adr2;

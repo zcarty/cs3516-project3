@@ -27,6 +27,26 @@ int create_cs3516_socket() {
     return sock;
 }
 
+int create_cs3516_socket(string address) {
+    int sock;
+    struct sockaddr_in server;
+    
+    sock = socket(AF_INET, SOCK_DGRAM, 0);
+
+    if (sock < 0) perror("Error creating CS3516 socket");
+
+    bzero(&server, sizeof(server));
+    server.sin_family = AF_INET;
+    server.sin_addr.s_addr = inet_addr(address.c_str());
+    server.sin_port = htons(MYPORT);
+    if (bind(sock, (struct sockaddr *) &server, sizeof(server) ) < 0) 
+        perror("Unable to bind CS3516 socket");
+
+    // Socket is now bound:
+    return sock;
+}
+
+
 int cs3516_recv(int sock, char *buffer, int buff_size) {
     struct sockaddr_in from;
     int fromlen, n;
