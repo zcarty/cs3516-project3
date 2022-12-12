@@ -92,3 +92,11 @@ fromConfig config(int nodeID) {
     configFile.close();
     return out;
 }
+
+void enqueue(fromConfig data)
+{
+    // if packet > queue length:
+    //     drop the packet
+    // Add delay for sending a packet
+    
+}
