@@ -3,7 +3,9 @@
 #include "router.cpp"
 using namespace std;
 
-
+char* queue = NULL;
+int q_count = 0;
+int q_start = 0;
 
 struct fromConfig {
     int queueLength;
@@ -93,10 +95,14 @@ fromConfig config(int nodeID) {
     return out;
 }
 
-void enqueue(fromConfig data)
+bool enqueue(fromConfig data, char* buffer)
 {
-    // if packet > queue length:
-    //     drop the packet
-    // Add delay for sending a packet
-    
+    if(queue == NULL) queue = (char*) malloc(data.queueLength*(2001));
+    if(q_count >= data.queueLength) return false;
+    else {
+        int index = (q_start + q_count) % data.queueLength;
+        memcpy((queue+2001*index), buffer, 2001);
+    } // figure out how to implement packet transmission delays, not necessarily but maybe here
+
+    return true;
 }

@@ -20,9 +20,11 @@ int main(int argc, char **argv)
 
     int socket = 0;
     // defining buffers
-    char SRC_BUFF[1001]; // additional byte to allow for space for null terminator
+    char SRC_BUFF[2001]; // additional byte to allow for space for null terminator
     char PAY_BUFF[1001]; // payload buffer, size can be adjusted later
     char ERR_BUFF[1001];
+
+    unsigned magic_num = 0xFF10483C; // special packet designation indicating filesize
 
     // run the file with cmd args (nodeID)
     if (data.type == 1) // Router
@@ -31,25 +33,66 @@ int main(int argc, char **argv)
         cout << "Creating socket...";
         socket = create_cs3516_socket(data.ip_host);
         cout << "done." << endl;
-        
 
-        
-        while(1){
+        char filename[] = "x_control.txt";
+        filename[0] = nodeID + '0';
+        ofstream logfile;
+        struct timeval UNIX_TIME;
+
+        while(1) {
             // First receive file size
-            cs3516_recv(socket, SRC_BUFF, sizeof(SRC_BUFF));
-            int filesize = atoi(SRC_BUFF);
-            int packet_num = (filesize / 1000) + 1;
-            char PACKET_BUFF[filesize];
+            int recv_output = cs3516_recv(socket, SRC_BUFF, sizeof(SRC_BUFF));
+            
+            struct ip iphead;
+            struct udphdr udphead;
+            memcpy(&iphead,  SRC_BUFF,  sizeof(struct ip));
+            memcpy(&udphead, SRC_BUFF + sizeof(struct ip),  sizeof(struct udphdr));
+            memcpy(PAY_BUFF, SRC_BUFF + sizeof(struct ip) + sizeof(struct udphdr), (udphead.uh_ulen - sizeof(struct udphdr)));
+            
+            unsigned num_test = *PAY_BUFF;
+            if((udphead.uh_ulen - sizeof(struct udphdr)) == 8 && num_test == magic_num) {
+                int filesize = atoi((PAY_BUFF+4));
+                int packet_num = ((filesize-1) / 1000) + 1;
 
-            // Recieve packet use select with timeout
-            for(int i; i < packet_num; i++)
-            {
-                cs3516_recv(socket, PAY_BUFF, sizeof(PAY_BUFF));
-               // PACKET_BUFF 
-            // ip_header-> ttl--;
-            // if ttl < 1 {
-            // drop the packet
-            // }
+                // TODO: Find destination and forward file-size packet to that destination
+            } else {
+                if(iphead.ip_ttl <= 1) {
+                    gettimeofday(&UNIX_TIME, NULL);
+
+                    logfile.open(filename);
+                    logfile << UNIX_TIME.tv_sec << "." << (UNIX_TIME.tv_usec/1000)   << "  "
+                            << inet_ntoa(iphead.ip_src) << "  "
+                            << inet_ntoa(iphead.ip_dst) << "  "
+                            << iphead.ip_id << "  " << "TTL_EXPIRED" << endl;
+                    logfile.close();
+                    continue;
+                } else {
+                    iphead.ip_ttl--;
+                    memcpy(SRC_BUFF,  &iphead,  sizeof(struct ip));
+
+                    // TODO: Figure out what next hop is before enqueue, and drop packet if no route is resolved
+
+                    if(enqueue(data, SRC_BUFF)) {
+                        gettimeofday(&UNIX_TIME, NULL);
+
+                        logfile.open(filename);
+                        logfile << UNIX_TIME.tv_sec << "." << (UNIX_TIME.tv_usec/1000)   << "  "
+                            << inet_ntoa(iphead.ip_src) << "  "
+                            << inet_ntoa(iphead.ip_dst) << "  "
+                            << iphead.ip_id << "  " << "SENT_OKAY" << "  "
+                            << "[NEXT HOP]" << endl;
+                        logfile.close();
+                    } else {
+                        gettimeofday(&UNIX_TIME, NULL);
+
+                        logfile.open(filename);
+                        logfile << UNIX_TIME.tv_sec << "." << (UNIX_TIME.tv_usec/1000)   << "  "
+                            << inet_ntoa(iphead.ip_src) << "  "
+                            << inet_ntoa(iphead.ip_dst) << "  "
+                            << iphead.ip_id << "  " << "MAX_SENDQ_EXCEEDED" << endl;
+                        logfile.close();
+                    }
+                }
             }
 
             // Forward packet to nextIP
