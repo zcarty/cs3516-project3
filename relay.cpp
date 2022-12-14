@@ -20,6 +20,7 @@ int main(int argc, char **argv)
 
     int socket = 0;
     // defining buffers
+    char FILESIZE_BUFF[64];
     char SRC_BUFF[2001]; // additional byte to allow for space for null terminator
     char PAY_BUFF[1001]; // payload buffer, size can be adjusted later
     char ERR_BUFF[1001];
@@ -39,69 +40,82 @@ int main(int argc, char **argv)
         ofstream logfile;
         struct timeval UNIX_TIME;
 
-        while(1) {
+        while (1)
+        {
             // First receive file size
             int recv_output = cs3516_recv(socket, SRC_BUFF, sizeof(SRC_BUFF));
-            
+
             struct ip iphead;
             struct udphdr udphead;
-            memcpy(&iphead,  SRC_BUFF,  sizeof(struct ip));
-            memcpy(&udphead, SRC_BUFF + sizeof(struct ip),  sizeof(struct udphdr));
+            memcpy(&iphead, SRC_BUFF, sizeof(struct ip));
+            memcpy(&udphead, SRC_BUFF + sizeof(struct ip), sizeof(struct udphdr));
             memcpy(PAY_BUFF, SRC_BUFF + sizeof(struct ip) + sizeof(struct udphdr), (udphead.uh_ulen - sizeof(struct udphdr)));
-            
+
             unsigned num_test = *PAY_BUFF;
-            if((udphead.uh_ulen - sizeof(struct udphdr)) == 8 && num_test == magic_num) {
-                int filesize = atoi((PAY_BUFF+4));
-                int packet_num = ((filesize-1) / 1000) + 1;
+            if ((udphead.uh_ulen - sizeof(struct udphdr)) == 8 && num_test == magic_num)
+            {
+                int filesize = atoi((PAY_BUFF + 4));
+                int packet_num = ((filesize - 1) / 1000) + 1;
 
                 // TODO: Find destination and forward file-size packet to that destination
-            } else {
-                if(iphead.ip_ttl <= 1) {
+            }
+            else
+            {
+                if (iphead.ip_ttl <= 1)
+                {
                     gettimeofday(&UNIX_TIME, NULL);
 
                     logfile.open(filename);
-                    logfile << UNIX_TIME.tv_sec << "." << (UNIX_TIME.tv_usec/1000)   << "  "
+                    logfile << UNIX_TIME.tv_sec << "." << (UNIX_TIME.tv_usec / 1000) << "  "
                             << inet_ntoa(iphead.ip_src) << "  "
                             << inet_ntoa(iphead.ip_dst) << "  "
-                            << iphead.ip_id << "  " << "TTL_EXPIRED" << endl;
+                            << iphead.ip_id << "  "
+                            << "TTL_EXPIRED" << endl;
                     logfile.close();
                     continue;
-                } else {
+                }
+                else
+                {
                     iphead.ip_ttl--;
-                    memcpy(SRC_BUFF,  &iphead,  sizeof(struct ip));
+                    memcpy(SRC_BUFF, &iphead, sizeof(struct ip));
 
                     // TODO: Figure out what next hop is before enqueue, and drop packet if no route is resolved
 
-                    if(enqueue(data, SRC_BUFF)) {
+                    if (enqueue(data, SRC_BUFF))
+                    {
                         gettimeofday(&UNIX_TIME, NULL);
 
                         logfile.open(filename);
-                        logfile << UNIX_TIME.tv_sec << "." << (UNIX_TIME.tv_usec/1000)   << "  "
-                            << inet_ntoa(iphead.ip_src) << "  "
-                            << inet_ntoa(iphead.ip_dst) << "  "
-                            << iphead.ip_id << "  " << "SENT_OKAY" << "  "
-                            << "[NEXT HOP]" << endl;
+                        logfile << UNIX_TIME.tv_sec << "." << (UNIX_TIME.tv_usec / 1000) << "  "
+                                << inet_ntoa(iphead.ip_src) << "  "
+                                << inet_ntoa(iphead.ip_dst) << "  "
+                                << iphead.ip_id << "  "
+                                << "SENT_OKAY"
+                                << "  "
+                                << "[NEXT HOP]" << endl;
                         logfile.close();
-                    } else {
+                    }
+                    else
+                    {
                         gettimeofday(&UNIX_TIME, NULL);
 
                         logfile.open(filename);
-                        logfile << UNIX_TIME.tv_sec << "." << (UNIX_TIME.tv_usec/1000)   << "  "
-                            << inet_ntoa(iphead.ip_src) << "  "
-                            << inet_ntoa(iphead.ip_dst) << "  "
-                            << iphead.ip_id << "  " << "MAX_SENDQ_EXCEEDED" << endl;
+                        logfile << UNIX_TIME.tv_sec << "." << (UNIX_TIME.tv_usec / 1000) << "  "
+                                << inet_ntoa(iphead.ip_src) << "  "
+                                << inet_ntoa(iphead.ip_dst) << "  "
+                                << iphead.ip_id << "  "
+                                << "MAX_SENDQ_EXCEEDED" << endl;
                         logfile.close();
                     }
                 }
             }
 
             // Forward packet to nextIP
-           // string nextIP = searchTrie(&data.root, );
-            for(int i; i < packet_num; i++)
+            // string nextIP = searchTrie(&data.root, );
+            for (int i; i < packet_num; i++)
             {
-               // cs3516_send(socket, , , nextIP);
+                // cs3516_send(socket, , , nextIP);
             }
-
         }
         /* router:
             call lookup function, which takes a destIP (overlay) and forwarding table returns new destIP(real)
@@ -113,23 +127,106 @@ int main(int argc, char **argv)
 
     else // End Host
     {
-        /* end host:
-            when run:
-            search for send_config.txt:
-            destIP(overlay) sourcePort destPort
-            search for send_body.txt:
-            send file size, then
-            divide the body into 1000 byte payloads and send to router
+        cout << "Creating socket...";
+        socket = create_cs3516_socket(data.ip_host);
+        cout << "done." << endl;
 
-            when receiving:
-            write stats to received_stats.txt
-            write contents to file called received
-            print to stdout size of transmitted file, # of packets transmitted
-                        size of received file, # of packets received
+        fd_set readfds;
+        fd_set writefds;
 
-            make a while loop to check contents of the endhost file (use select)
-        */
+        struct timeval tv;
+        tv.tv_sec = 0;
+        tv.tv_usec = 500000; // 0.5 sec timeout
+        while (1)
+        {
+            // First check if incoming packets can be read
+            /* Sets fds to zero */
+            FD_ZERO(&readfds);
+            FD_ZERO(&writefds);
+            FD_SET(socket, &readfds);
+            // Select only accepts if there is something to read
+            int r = select(FD_SETSIZE, &readfds, &writefds, NULL, &tv);
+
+            if (r > 0)
+            {
+                int bytes_recvd = cs3516_recv(socket, SRC_BUFF, (sizeof(SRC_BUFF) - 1));
+
+                struct ip iphead;
+                struct udphdr udphead;
+                memcpy(&iphead, SRC_BUFF, sizeof(struct ip));
+                memcpy(&udphead, SRC_BUFF + sizeof(struct ip), sizeof(struct udphdr));
+                memcpy(PAY_BUFF, SRC_BUFF + sizeof(struct ip) + sizeof(struct udphdr), (udphead.uh_ulen - sizeof(struct udphdr)));
+
+                string sourceIP = inet_ntoa(iphead.ip_src);
+                int filesize;
+                sscanf(PAY_BUFF, "%d", &filesize);
+                int packet_num = ((filesize - 1) / 972) + 1;
+
+                for (int i; i < packet_num; i++)
+                {
+                    int bytes_recvd = cs3516_recv(socket, SRC_BUFF, (sizeof(SRC_BUFF) - 1));
+
+                    struct ip iphead;
+                    struct udphdr udphead;
+                    memcpy(&iphead, SRC_BUFF, sizeof(struct ip));
+                    memcpy(&udphead, SRC_BUFF + sizeof(struct ip), sizeof(struct udphdr));
+                    memcpy(PAY_BUFF, SRC_BUFF + sizeof(struct ip) + sizeof(struct udphdr), (udphead.uh_ulen - sizeof(struct udphdr)));
+                    /*
+    when receiving:
+    write stats to received_stats.txt
+    write contents to file called received
+
+
+*/
+                }
+
+                printf("Recieving file of %d bytes (%d packets) from %s...", filesize, packet_num, sourceIP);
+            }
+
+            // Once packets are read, check for outbound packets
+            // Once data from send_body has been sent, both send_config.txt and send_body.txt will be deleted
+            string buff;
+            ifstream send_config;
+            send_config.open("send_config.txt");
+
+            int sourcePort;
+            int destPort;
+            getline(send_config, buff);
+            string destIP = buff.substr(0, 7);
+            sscanf(buff.substr(7).c_str(), "%d %d", &sourcePort, &destPort);
+
+            send_config.close();
+            remove("send_config.txt");
+
+            ifstream send_body;
+            send_body.open("send_body.txt");
+
+            int begin = send_body.tellg();
+            send_body.seekg(0, ios::end);
+            int end = send_body.tellg();
+            int filesize = end - begin;
+
+            int packet_num = ((filesize - 1) / 972) + 1;
+            char body_buff[filesize];
+
+            memcpy(FILESIZE_BUFF, (char *)&filesize, sizeof(filesize));
+            send_body.read(body_buff, filesize);
+            printf("Sending file of %d bytes (%d packets) to %s...", filesize, packet_num, destIP);
+
+            // Add headers
+            cs3516_send(socket, FILESIZE_BUFF, sizeof(FILESIZE_BUFF), data.router_ip);
+            for (int i; i < packet_num; i++)
+            {
+                // Divide into 1000 byte payloads and send
+                memcpy(PAY_BUFF, body_buff, sizeof(PAY_BUFF));
+                cs3516_send(socket, PAY_BUFF, sizeof(PAY_BUFF), data.router_ip);
+            }
+            cout << "done." << endl;
+        }
     }
+
+
+// FOR REFERENCE DELETE LATER
 
 
     // predefine host and router ips, this should change in the future if my assumptions are correct
