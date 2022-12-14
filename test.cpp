@@ -2,6 +2,9 @@
 #include "include.h"
 using namespace std;
 
-int main(void) {
-    cout << 999 / 1000;
+int main(void)
+{
+    struct ip iphead;
+    struct udphdr udphead;
+    cout << "ip " << sizeof(struct ip) << " udp " << sizeof(struct udphdr);
 }
