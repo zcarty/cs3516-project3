@@ -20,7 +20,6 @@ int main(int argc, char **argv)
 
     int socket = 0;
     // defining buffers
-    char FILESIZE_BUFF[64];
     char SRC_BUFF[2001]; // additional byte to allow for space for null terminator
     char PAY_BUFF[1001]; // payload buffer, size can be adjusted later
     char ERR_BUFF[1001];
@@ -160,9 +159,19 @@ int main(int argc, char **argv)
                 string sourceIP = inet_ntoa(iphead.ip_src);
                 int filesize;
                 sscanf(PAY_BUFF, "%d", &filesize);
-                int packet_num = ((filesize - 1) / 972) + 1;
+                int packet_num = (filesize / 972) + 1;
 
-                for (int i; i < packet_num; i++)
+                printf("Recieving file of %d bytes (%d packets) from %s...", filesize, packet_num, sourceIP);
+
+                ofstream received_stats;
+                received_stats.open("recieved_stats.txt", ios_base::app);
+                received_stats << "Source IP: " << inet_ntoa(iphead.ip_src) << "Dest IP: " << data.ip_overlay
+                               << "Source Port: " << udphead.uh_sport << "Dest Port: " << udphead.uh_dport << endl;
+                received_stats.close();
+
+                ofstream received;
+                received.open("recieved", ios_base::app);
+                for (int i = 0; i < packet_num; i++)
                 {
                     int bytes_recvd = cs3516_recv(socket, SRC_BUFF, (sizeof(SRC_BUFF) - 1));
 
@@ -171,16 +180,12 @@ int main(int argc, char **argv)
                     memcpy(&iphead, SRC_BUFF, sizeof(struct ip));
                     memcpy(&udphead, SRC_BUFF + sizeof(struct ip), sizeof(struct udphdr));
                     memcpy(PAY_BUFF, SRC_BUFF + sizeof(struct ip) + sizeof(struct udphdr), (udphead.uh_ulen - sizeof(struct udphdr)));
-                    /*
-    when receiving:
-    write stats to received_stats.txt
-    write contents to file called received
-
-
-*/
+                    received << PAY_BUFF;
                 }
-
-                printf("Recieving file of %d bytes (%d packets) from %s...", filesize, packet_num, sourceIP);
+                received << endl
+                         << endl;
+                received.close();
+                cout << "done." << endl;
             }
 
             // Once packets are read, check for outbound packets
@@ -206,28 +211,78 @@ int main(int argc, char **argv)
             int end = send_body.tellg();
             int filesize = end - begin;
 
-            int packet_num = ((filesize - 1) / 972) + 1;
-            char body_buff[filesize];
+            int packet_num = (filesize / 972) + 1;
 
-            memcpy(FILESIZE_BUFF, (char *)&filesize, sizeof(filesize));
-            send_body.read(body_buff, filesize);
             printf("Sending file of %d bytes (%d packets) to %s...", filesize, packet_num, destIP);
 
             // Add headers
-            cs3516_send(socket, FILESIZE_BUFF, sizeof(FILESIZE_BUFF), data.router_ip);
-            for (int i; i < packet_num; i++)
+            struct ip iphead;
+            char message[4];
+            memcpy(message, (char *)&filesize, sizeof(filesize));
+            iphead.ip_len = (20 + sizeof(struct udphdr) + sizeof(message)); // ip header + udp header + message
+            iphead.ip_ttl = data.TTLVal;
+            inet_aton(data.ip_overlay.c_str(), &iphead.ip_src);
+            inet_aton(destIP.c_str(), &iphead.ip_dst);
+            iphead.ip_tos = 0;
+            iphead.ip_off = 0;
+            iphead.ip_sum = 0;
+            iphead.ip_hl = 5;
+            iphead.ip_id = 0; // ip_id will increment as packets are transmitted
+            iphead.ip_p = 17; // relevant to udp
+            iphead.ip_v = 4;
+
+            struct udphdr udphead;
+            udphead.uh_ulen = (sizeof(struct udphdr) + sizeof(message));
+            udphead.uh_sport = MYPORT;
+            udphead.uh_dport = MYPORT;
+            udphead.uh_sum = 0;
+
+            memcpy(SRC_BUFF, &iphead, sizeof(struct ip));
+            memcpy((SRC_BUFF + sizeof(struct ip)), &udphead, sizeof(struct udphdr));
+            memcpy((SRC_BUFF + sizeof(struct ip) + sizeof(struct udphdr)), message, sizeof(message));
+            cs3516_send(socket, SRC_BUFF, iphead.ip_len, data.router_ip);
+
+            for (int i = 0; i < packet_num; i++)
             {
-                // Divide into 1000 byte payloads and send
-                memcpy(PAY_BUFF, body_buff, sizeof(PAY_BUFF));
-                cs3516_send(socket, PAY_BUFF, sizeof(PAY_BUFF), data.router_ip);
+                int message_len = 972;
+                if (i == (packet_num - 1)) // Last packet
+                {
+                    message_len = filesize % 972;
+                }
+                struct ip iphead;
+                char message[message_len];
+                send_body.read(message, message_len);
+
+                iphead.ip_len = (20 + sizeof(struct udphdr) + sizeof(message)); // ip header + udp header + message
+                iphead.ip_ttl = data.TTLVal;
+                inet_aton(data.ip_overlay.c_str(), &iphead.ip_src);
+                inet_aton(destIP.c_str(), &iphead.ip_dst);
+                iphead.ip_tos = 0;
+                iphead.ip_off = 0;
+                iphead.ip_sum = 0;
+                iphead.ip_hl = 5;
+                iphead.ip_id = 0; // ip_id will increment as packets are transmitted
+                iphead.ip_p = 17; // relevant to udp
+                iphead.ip_v = 4;
+
+                struct udphdr udphead;
+                udphead.uh_ulen = (sizeof(struct udphdr) + sizeof(message));
+                udphead.uh_sport = MYPORT;
+                udphead.uh_dport = MYPORT;
+                udphead.uh_sum = 0;
+
+                memcpy(SRC_BUFF, &iphead, sizeof(struct ip));
+                memcpy((SRC_BUFF + sizeof(struct ip)), &udphead, sizeof(struct udphdr));
+                memcpy((SRC_BUFF + sizeof(struct ip) + sizeof(struct udphdr)), message, sizeof(message));
+                cs3516_send(socket, SRC_BUFF, iphead.ip_len, data.router_ip);
             }
+            send_body.close();
+            remove("send_body.txt");
             cout << "done." << endl;
         }
     }
 
-
-// FOR REFERENCE DELETE LATER
-
+    // FOR REFERENCE DELETE LATER
 
     // predefine host and router ips, this should change in the future if my assumptions are correct
     struct in_addr adr1;
