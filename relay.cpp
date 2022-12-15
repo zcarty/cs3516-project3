@@ -34,6 +34,13 @@ int main(int argc, char **argv)
         socket = create_cs3516_socket(data.ip_host);
         cout << "done." << endl;
 
+        fd_set readfds;
+        fd_set writefds;
+
+        struct timeval tv;
+        tv.tv_sec = 0;
+        tv.tv_usec = 10000; // 0.01 sec timeout
+
         char filename[] = "x_control.txt";
         filename[0] = nodeID + '0';
         ofstream logfile;
@@ -41,7 +48,17 @@ int main(int argc, char **argv)
 
         while (1)
         {
-            // First receive file size
+            // Iterate through queue
+            processQueue(socket, data);
+
+            FD_ZERO(&readfds);
+            FD_ZERO(&writefds);
+            FD_SET(socket, &readfds);
+            // Select only accepts if there is something to read
+            int r = select(FD_SETSIZE, &readfds, &writefds, NULL, &tv);
+            if(r <= 0) continue;
+
+            // Receive file size
             int recv_output = cs3516_recv(socket, SRC_BUFF, sizeof(SRC_BUFF));
 
             struct ip iphead;
@@ -67,8 +84,7 @@ int main(int argc, char **argv)
             }
             else
             {
-                if (iphead.ip_ttl <= 1)
-                {
+                if (iphead.ip_ttl <= 1) {
                     gettimeofday(&UNIX_TIME, NULL);
 
                     logfile.open(filename);
@@ -79,15 +95,34 @@ int main(int argc, char **argv)
                             << "TTL_EXPIRED" << endl;
                     logfile.close();
                     continue;
-                }
-                else
-                {
+                } else {
                     iphead.ip_ttl--;
                     memcpy(SRC_BUFF, &iphead, sizeof(struct ip));
 
                     // TODO: Figure out what next hop is before enqueue, and drop packet if no route is resolved
+                    string destIP = searchTrie(&data.root, inet_ntoa(iphead.ip_dst));
+                    int destNode  = searchTrieForNode(&data.root, inet_ntoa(iphead.ip_dst));
 
-                    if (enqueue(data, SRC_BUFF))
+                    if(destIP == "IP not found") {
+                        gettimeofday(&UNIX_TIME, NULL);
+
+                        logfile.open(filename);
+                        logfile << UNIX_TIME.tv_sec << "." << (UNIX_TIME.tv_usec / 1000) << "  "
+                                << inet_ntoa(iphead.ip_src) << "  "
+                                << inet_ntoa(iphead.ip_dst) << "  "
+                                << iphead.ip_id << "  "
+                                << "NO_ROUTE_TO_HOST" << endl;
+                        logfile.close();
+                        continue;
+                    }
+
+                    if(destIP == data.ip_host) {
+                        fromConfig destinationData = config(data.destID);
+                        destIP = destinationData.ip_host;
+                        destNode = data.destID;
+                    }
+
+                    if (enqueue(data, SRC_BUFF, destIP, destNode))
                     {
                         gettimeofday(&UNIX_TIME, NULL);
 
@@ -96,9 +131,8 @@ int main(int argc, char **argv)
                                 << inet_ntoa(iphead.ip_src) << "  "
                                 << inet_ntoa(iphead.ip_dst) << "  "
                                 << iphead.ip_id << "  "
-                                << "SENT_OKAY"
-                                << "  "
-                                << "[NEXT HOP]" << endl;
+                                << "SENT_OKAY" << "  "
+                                << destIP << endl;
                         logfile.close();
                     }
                     else
@@ -115,20 +149,7 @@ int main(int argc, char **argv)
                     }
                 }
             }
-
-            // Forward packet to nextIP
-            // string nextIP = searchTrie(&data.root, );
-            for (int i; i < packet_num; i++)
-            {
-                // cs3516_send(socket, , , nextIP);
-            }
         }
-        /* router:
-            call lookup function, which takes a destIP (overlay) and forwarding table returns new destIP(real)
-
-            write to log file (ROUTER_control.txt)
-            UNIXTIME SOURCE_OVERLAY_IP DEST_OVERLAY_IP IP_IDENT STATUS_CODE [NEXT_HOP]
-    */
     }
 
     else // End Host
