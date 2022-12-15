@@ -56,7 +56,14 @@ int main(int argc, char **argv)
                 int filesize = atoi((PAY_BUFF + 4));
                 int packet_num = ((filesize - 1) / 1000) + 1;
 
-                // TODO: Find destination and forward file-size packet to that destination
+                // Find destination and forward file-size packet to that destination
+                string destIP = searchTrie(&data.root, inet_ntoa(iphead.ip_dst));
+                if(destIP == data.ip_host) { // send direct to end-host
+                    fromConfig destinationData = config(data.destID);
+                    cs3516_send(socket, SRC_BUFF, recv_output, destinationData.ip_host);
+                } else { // forward to another router
+                    cs3516_send(socket, SRC_BUFF, recv_output, destIP);
+                }
             }
             else
             {

@@ -17,6 +17,7 @@ struct fromConfig
     int type = 1;
     TrieNode root;
     string router_ip;
+    int destID;
 };
 
 fromConfig config(int nodeID)
@@ -83,10 +84,10 @@ fromConfig config(int nodeID)
             out.ip_overlay = buff.substr(15);
         }
         // Creates Trie Structure
-        else if (out.type == 1)
-        {
-            insertNode(&out.root, buff.substr(15), buff.substr(4, 10));
-        }
+        // else if (out.type == 1)
+        // {
+        //     insertNode(&out.root, buff.substr(15), buff.substr(4, 10));
+        // }
     }
 
     // LINES 8-11
@@ -110,14 +111,18 @@ fromConfig config(int nodeID)
 
     // LINES 11-13
     char *serverOverlay;
+    char subnet[12];
     for (int i = 0; i < 3; i++)
     {
         getline(configFile, buff);
-        sscanf(buff.c_str(), "%d %d %d", &step, &sendNode, &sendDelay);
-        sscanf(buff.substr(20).c_str(), "%d %d", &recNode, &recDelay);
+        sscanf(buff.c_str(), "%d %d %d %s %d %d", &step, &sendNode, &sendDelay, subnet, &recNode, &recDelay);
+        subnet[7] = '\0'; // set null terminator to void out actual subnet
+        insertNode(&out.root, subnet, out.ip_host);
+
         if (sendNode == nodeID)
         {
             out.delay[recNode] = sendDelay;
+            out.destID = recNode;
         }
         else if (recNode == nodeID)
         {

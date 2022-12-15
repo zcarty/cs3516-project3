@@ -23,27 +23,30 @@ struct TrieNode *getNode(void)
  
 // Takes overlay IP and real IP and adds them to trie
 void insertNode(struct TrieNode *root, string overlayIP, string realIP)
-{ 
-    for (int i = 0; i < overlayIP.length(); i++)
+{
+    in_addr_t bin_overlay = inet_addr(overlayIP.c_str()); // convert overlayIP to binary format
+
+    for (int i = 31; i >= 8; i--) 
     {
-        int index = int(overlayIP[i] - '0');
+        int index = (bin_overlay >> i) & 0x1;
         if (root->children[index] == NULL) {
             root->children[index] = getNode();
-            break;
         }
         root = root->children[index];
     }
- 
+    
     root->nextHop = realIP;
 }
 // Searches Trie for overlayIP and returns best destIP
 string searchTrie(struct TrieNode *root, string overlayIP)
 {
-    for (int i = 0; i < overlayIP.length(); i++)
+    in_addr_t bin_overlay = inet_addr(overlayIP.c_str()); // convert overlayIP to binary format
+
+    for (int i = 31; i >= 0; i--)
     {
-        int index = int(overlayIP[i] - '0');
-        if (root->children[index] != NULL) {
-            return root->children[index]->nextHop;
+        int index = (bin_overlay >> i) & 0x1;
+        if (root->children[index] == NULL) {
+            return root->nextHop;
         }
         root = root->children[index];
     }
