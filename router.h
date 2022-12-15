@@ -4,7 +4,7 @@
 
 struct TrieNode
 {
-    struct TrieNode *children[2];
+    struct TrieNode *children[10] = {NULL};
     std::string nextHop;
     int nodeID;
 };

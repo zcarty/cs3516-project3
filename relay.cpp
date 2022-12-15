@@ -2,6 +2,7 @@
 #include "config.h"
 #include "router.h"
 #include "cs3516sock.h"
+using namespace std;
 
 /*
  * relay.cpp
@@ -21,8 +22,8 @@ int main(int argc, char **argv)
     int socket = 0;
     // defining buffers
     char SRC_BUFF[2001]; // additional byte to allow for space for null terminator
-    char PAY_BUFF[1001]; // payload buffer, size can be adjusted later
-    char ERR_BUFF[1001];
+    char PAY_BUFF[2001]; // payload buffer, size can be adjusted later
+    char ERR_BUFF[2001];
 
     unsigned magic_num = 0xFF10483C; // special packet designation indicating filesize
 
@@ -30,7 +31,7 @@ int main(int argc, char **argv)
     if (data.type == 1) // Router
     {
         // create socket s_addr change for multiple ips on one vm
-        std::cout << "Creating socket...";
+        std::cout << "Creating socket at ip: " << data.ip_host << "...";
         socket = create_cs3516_socket(data.ip_host);
         std::cout << "done." << std::endl;
 
@@ -56,9 +57,10 @@ int main(int argc, char **argv)
             FD_SET(socket, &readfds);
             // Select only accepts if there is something to read
             int r = select(FD_SETSIZE, &readfds, &writefds, NULL, &tv);
-            if(r <= 0) continue;
+            if (r <= 0)
+                continue;
 
-            // Receive file size
+            // Receive filesize
             int recv_output = cs3516_recv(socket, SRC_BUFF, sizeof(SRC_BUFF));
 
             struct ip iphead;
@@ -68,93 +70,124 @@ int main(int argc, char **argv)
             memcpy(PAY_BUFF, SRC_BUFF + sizeof(struct ip) + sizeof(struct udphdr), (udphead.uh_ulen - sizeof(struct udphdr)));
 
             unsigned num_test = *PAY_BUFF;
-            if ((udphead.uh_ulen - sizeof(struct udphdr)) == 8 && num_test == magic_num)
-            {
-                int filesize = atoi((PAY_BUFF + 4));
+            //if ((udphead.uh_ulen - sizeof(struct udphdr)) == 8 && num_test == magic_num)
+            //{
+                int filesize = atoi((PAY_BUFF));
                 int packet_num = ((filesize - 1) / 1000) + 1;
 
                 // Find destination and forward file-size packet to that destination
                 std::string destIP = searchTrie(&data.root, inet_ntoa(iphead.ip_dst));
-                if(destIP == data.ip_host) { // send direct to end-host
+                cout << destIP << endl;
+                if (destIP == data.ip_host)
+                { // send direct to end-host
                     fromConfig destinationData = config(data.destID);
+                    printf("Sending file of %d bytes (%d packets) to %s...", filesize, packet_num, destinationData.ip_host.c_str());
                     cs3516_send(socket, SRC_BUFF, recv_output, destinationData.ip_host);
-                } else { // forward to another router
+                    cout << "done." << endl;
+                }
+                else
+                { // forward to another router
+                    printf("Sending file of %d bytes (%d packets) to %s. Routing packets to %s...", filesize, packet_num,  inet_ntoa(iphead.ip_dst), destIP.c_str());
                     cs3516_send(socket, SRC_BUFF, recv_output, destIP);
                 }
-            }
-            else
-            {
-                if (iphead.ip_ttl <= 1) {
-                    gettimeofday(&UNIX_TIME, NULL);
+            //}
+        //     else
+        //     {
+        //         if (iphead.ip_ttl <= 1)
+        //         {
+        //             gettimeofday(&UNIX_TIME, NULL);
 
-                    logfile.open(filename);
-                    logfile << UNIX_TIME.tv_sec << "." << (UNIX_TIME.tv_usec / 1000) << "  "
-                            << inet_ntoa(iphead.ip_src) << "  "
-                            << inet_ntoa(iphead.ip_dst) << "  "
-                            << iphead.ip_id << "  "
-                            << "TTL_EXPIRED" << std::endl;
-                    logfile.close();
-                    continue;
-                } else {
-                    iphead.ip_ttl--;
-                    memcpy(SRC_BUFF, &iphead, sizeof(struct ip));
+        //             logfile.open(filename);
+        //             logfile << UNIX_TIME.tv_sec << "." << (UNIX_TIME.tv_usec / 1000) << "  "
+        //                     << inet_ntoa(iphead.ip_src) << "  "
+        //                     << inet_ntoa(iphead.ip_dst) << "  "
+        //                     << iphead.ip_id << "  "
+        //                     << "TTL_EXPIRED" << std::endl;
+        //             logfile.close();
+        //             continue;
+        //         }
+        //         else
+        //         {
+        //             iphead.ip_ttl--;
+        //             memcpy(SRC_BUFF, &iphead, sizeof(struct ip));
 
-                    // TODO: Figure out what next hop is before enqueue, and drop packet if no route is resolved
-                    std::string destIP = searchTrie(&data.root, inet_ntoa(iphead.ip_dst));
-                    int destNode  = searchTrieForNode(&data.root, inet_ntoa(iphead.ip_dst));
+        //             // TODO: Figure out what next hop is before enqueue, and drop packet if no route is resolved
+        //             std::string destIP = searchTrie(&data.root, inet_ntoa(iphead.ip_dst));
+        //             int destNode = searchTrieForNode(&data.root, inet_ntoa(iphead.ip_dst));
 
-                    if(destIP == "IP not found") {
-                        gettimeofday(&UNIX_TIME, NULL);
+        //             if (destIP == "IP not found")
+        //             {
+        //                 gettimeofday(&UNIX_TIME, NULL);
 
-                        logfile.open(filename);
-                        logfile << UNIX_TIME.tv_sec << "." << (UNIX_TIME.tv_usec / 1000) << "  "
-                                << inet_ntoa(iphead.ip_src) << "  "
-                                << inet_ntoa(iphead.ip_dst) << "  "
-                                << iphead.ip_id << "  "
-                                << "NO_ROUTE_TO_HOST" << std::endl;
-                        logfile.close();
-                        continue;
-                    }
+        //                 logfile.open(filename);
+        //                 logfile << UNIX_TIME.tv_sec << "." << (UNIX_TIME.tv_usec / 1000) << "  "
+        //                         << inet_ntoa(iphead.ip_src) << "  "
+        //                         << inet_ntoa(iphead.ip_dst) << "  "
+        //                         << iphead.ip_id << "  "
+        //                         << "NO_ROUTE_TO_HOST" << std::endl;
 
-                    if(destIP == data.ip_host) {
-                        fromConfig destinationData = config(data.destID);
-                        destIP = destinationData.ip_host;
-                        destNode = data.destID;
-                    }
+        //                 cout << UNIX_TIME.tv_sec << "." << (UNIX_TIME.tv_usec / 1000) << "  "
+        //                      << inet_ntoa(iphead.ip_src) << "  "
+        //                      << inet_ntoa(iphead.ip_dst) << "  "
+        //                      << iphead.ip_id << "  "
+        //                      << "NO_ROUTE_TO_HOST" << std::endl;
+        //                 logfile.close();
+        //                 continue;
+        //             }
 
-                    if (enqueue(data, SRC_BUFF, destIP, destNode))
-                    {
-                        gettimeofday(&UNIX_TIME, NULL);
+        //             if (destIP == data.ip_host)
+        //             {
+        //                 fromConfig destinationData = config(data.destID);
+        //                 destIP = destinationData.ip_host;
+        //                 destNode = data.destID;
+        //             }
 
-                        logfile.open(filename);
-                        logfile << UNIX_TIME.tv_sec << "." << (UNIX_TIME.tv_usec / 1000) << "  "
-                                << inet_ntoa(iphead.ip_src) << "  "
-                                << inet_ntoa(iphead.ip_dst) << "  "
-                                << iphead.ip_id << "  "
-                                << "SENT_OKAY" << "  "
-                                << destIP << std::endl;
-                        logfile.close();
-                    }
-                    else
-                    {
-                        gettimeofday(&UNIX_TIME, NULL);
+        //             if (enqueue(data, SRC_BUFF, destIP, destNode))
+        //             {
+        //                 gettimeofday(&UNIX_TIME, NULL);
 
-                        logfile.open(filename);
-                        logfile << UNIX_TIME.tv_sec << "." << (UNIX_TIME.tv_usec / 1000) << "  "
-                                << inet_ntoa(iphead.ip_src) << "  "
-                                << inet_ntoa(iphead.ip_dst) << "  "
-                                << iphead.ip_id << "  "
-                                << "MAX_SENDQ_EXCEEDED" << std::endl;
-                        logfile.close();
-                    }
-                }
-            }
-        }
-    }
+        //                 logfile.open(filename);
+        //                 logfile << UNIX_TIME.tv_sec << "." << (UNIX_TIME.tv_usec / 1000) << "  "
+        //                         << inet_ntoa(iphead.ip_src) << "  "
+        //                         << inet_ntoa(iphead.ip_dst) << "  "
+        //                         << iphead.ip_id << "  "
+        //                         << "SENT_OKAY"
+        //                         << "  "
+        //                         << destIP << std::endl;
+        //                 cout << UNIX_TIME.tv_sec << "." << (UNIX_TIME.tv_usec / 1000) << "  "
+        //                      << inet_ntoa(iphead.ip_src) << "  "
+        //                      << inet_ntoa(iphead.ip_dst) << "  "
+        //                      << iphead.ip_id << "  "
+        //                      << "SENT_OKAY"
+        //                      << "  "
+        //                      << destIP << std::endl;
+        //                 logfile.close();
+        //             }
+        //             else
+        //             {
+        //                 gettimeofday(&UNIX_TIME, NULL);
+
+        //                 logfile.open(filename);
+        //                 logfile << UNIX_TIME.tv_sec << "." << (UNIX_TIME.tv_usec / 1000) << "  "
+        //                         << inet_ntoa(iphead.ip_src) << "  "
+        //                         << inet_ntoa(iphead.ip_dst) << "  "
+        //                         << iphead.ip_id << "  "
+        //                         << "MAX_SENDQ_EXCEEDED" << std::endl;
+        //                 cout << UNIX_TIME.tv_sec << "." << (UNIX_TIME.tv_usec / 1000) << "  "
+        //                      << inet_ntoa(iphead.ip_src) << "  "
+        //                      << inet_ntoa(iphead.ip_dst) << "  "
+        //                      << iphead.ip_id << "  "
+        //                      << "MAX_SENDQ_EXCEEDED" << std::endl;
+        //                 logfile.close();
+        //             }
+        //         }
+        //     }
+        // }
+    }}
 
     else // End Host
     {
-        std::cout << "Creating socket...";
+        std::cout << "Creating socket at ip: " << data.ip_host << "...";
         socket = create_cs3516_socket(data.ip_host);
         std::cout << "done." << std::endl;
 
@@ -189,18 +222,18 @@ int main(int argc, char **argv)
                 std::string sourceIP = inet_ntoa(iphead.ip_src);
                 int filesize;
                 sscanf(PAY_BUFF, "%d", &filesize);
-                int packet_num = ((filesize-1) / 1000) + 1;
+                int packet_num = ((filesize - 1) / 1000) + 1;
 
-                printf("Recieving file of %d bytes (%d packets) from %s...", filesize, packet_num, sourceIP.c_str());
+                printf("Receiving file of %d bytes (%d packets) from %s...", filesize, packet_num, sourceIP.c_str());
 
                 std::ofstream received_stats;
-                received_stats.open("recieved_stats.txt", std::ios_base::app);
+                received_stats.open("received_stats.txt", std::ios_base::app);
                 received_stats << "Source IP: " << inet_ntoa(iphead.ip_src) << "Dest IP: " << data.ip_overlay
                                << "Source Port: " << udphead.uh_sport << "Dest Port: " << udphead.uh_dport << std::endl;
                 received_stats.close();
 
                 std::ofstream received;
-                received.open("recieved", std::ios_base::app);
+                received.open("received", std::ios_base::app);
                 for (int i = 0; i < packet_num; i++)
                 {
                     int bytes_recvd = cs3516_recv(socket, SRC_BUFF, (sizeof(SRC_BUFF) - 1));
@@ -216,14 +249,17 @@ int main(int argc, char **argv)
                          << std::endl;
                 received.close();
                 std::cout << "done." << std::endl;
-            } if(sent_file) continue; 
-            sent_file = true;
+            }
 
             // Once packets are read, check for outbound packets
             // Once data from send_body has been sent, both send_config.txt and send_body.txt will be deleted
             std::string buff;
-            std::ifstream send_config;
+            std::fstream send_config;
             send_config.open("send_config.txt");
+            if (send_config.peek() == std::ifstream::traits_type::eof())
+            {
+                continue;
+            }
 
             int sourcePort;
             int destPort;
@@ -232,9 +268,10 @@ int main(int argc, char **argv)
             sscanf(buff.substr(7).c_str(), "%d %d", &sourcePort, &destPort);
 
             send_config.close();
-            //remove("send_config.txt");
+            send_config.open("send_config.txt", std::ofstream::out | std::ofstream::trunc);
+            send_config.close();
 
-            std::ifstream send_body;
+            std::fstream send_body;
             send_body.open("send_body.txt");
 
             int begin = send_body.tellg();
@@ -242,9 +279,9 @@ int main(int argc, char **argv)
             int end = send_body.tellg();
             int filesize = end - begin;
 
-            int packet_num = ((filesize-1) / 1000) + 1;
+            int packet_num = ((filesize - 1) / 1000) + 1;
 
-            printf("Sending file of %d bytes (%d packets) to %s...", filesize, packet_num, destIP.c_str());
+            printf("Sending file of %d bytes (%d packets) to %s. Routing packets to %s...", filesize, packet_num, destIP.c_str(), data.router_ip.c_str());
 
             // Add headers
             struct ip iphead;
@@ -308,7 +345,8 @@ int main(int argc, char **argv)
                 cs3516_send(socket, SRC_BUFF, iphead.ip_len, data.router_ip);
             }
             send_body.close();
-            //remove("send_body.txt");
+            send_body.open("send_body.txt", std::ofstream::out | std::ofstream::trunc);
+            send_body.close();
             std::cout << "done." << std::endl;
         }
     }

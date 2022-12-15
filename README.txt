@@ -6,12 +6,12 @@ Creates an overlay network with following features:
 
  Currently we have checkpoint numbers 1,2,3 and 7 completed
 
-End-Hosts:
-host1 (8114) 10.63.30.1
-host2 (8115) 10.63.30.2
-host3 (8116) 10.63.30.3
+Router:
+host1 (8114) 10.63.30.1 nodeID 1
+host2 (8115) 10.63.30.2 nodeID 2
+host3 (8116) 10.63.30.3 nodeID 3
 
-Routers:
+End-Hosts:
 host4 (8117) 10.63.30.4, 10.63.30.5, 10.63.30.6
 
 
