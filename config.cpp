@@ -1,9 +1,10 @@
 /* Sets all vars for configuration*/
 #include "include.h"
-#include "router.cpp"
-using namespace std;
+#include "cs3516sock.h"
+#include "config.h"
+#include "router.h"
 
-string *qdest = NULL;
+std::string *qdest = NULL;
 char *queue = NULL;
 int *qid = NULL;
 int q_count = 0;
@@ -11,26 +12,15 @@ int q_start = 0;
 
 struct timeval action_report[7];
 
-struct fromConfig
-{
-    int queueLength;
-    int TTLVal;
-    string ip_host;
-    string ip_overlay;
-    int delay[7];
-    int type = 1;
-    TrieNode root;
-    string router_ip;
-    int destID;
-};
+
 
 fromConfig config(int nodeID)
 {
     fromConfig out;
 
     // Deal with config.txt
-    string buff;
-    ifstream configFile;
+    std::string buff;
+    std::ifstream configFile;
     configFile.open("config.txt");
 
     switch (nodeID)
@@ -116,6 +106,8 @@ fromConfig config(int nodeID)
         getline(configFile, buff);
         sscanf(buff.c_str(), "%d %d %d %s %d %d", &step, &sendNode, &sendDelay, subnet, &recNode, &recDelay);
         subnet[7] = '\0'; // set null terminator to void out actual subnet
+        out.root.children[0] = NULL;
+        out.root.children[1] = NULL;
         insertNode(&out.root, subnet, out.ip_host, nodeID);
 
         if (sendNode == nodeID)
@@ -133,12 +125,12 @@ fromConfig config(int nodeID)
     return out;
 }
 
-bool enqueue(fromConfig data, char *buffer, string ip_dest, int id_node)
+bool enqueue(fromConfig data, char *buffer, std::string ip_dest, int id_node)
 {
     if (queue == NULL) {
         queue = (char *) malloc(data.queueLength * (2001));
         qid = (int *) malloc(data.queueLength*sizeof(int));
-        qdest = (string *) malloc(data.queueLength*sizeof(string));
+        qdest = (std::string *) malloc(data.queueLength*sizeof(std::string));
         for(int i = 0; i < 7; i++) {
             action_report[i].tv_sec = -1;
             action_report[i].tv_usec = -1;

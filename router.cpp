@@ -1,15 +1,11 @@
 /* Contains trie data structure for router */
 
 #include "include.h"
-using namespace std;
+#include "router.h"
+//using namespace std;
  
 
-struct TrieNode
-{
-    struct TrieNode *children[2];
-    string nextHop = NULL;
-    int nodeID;
-};
+
  
 // Returns node in Trie
 struct TrieNode *getNode(void)
@@ -23,7 +19,7 @@ struct TrieNode *getNode(void)
 }
  
 // Takes overlay IP and real IP and adds them to trie
-void insertNode(struct TrieNode *root, string overlayIP, string realIP, int nodeID)
+void insertNode(struct TrieNode *root, std::string overlayIP, std::string realIP, int nodeID)
 {
     in_addr_t bin_overlay = inet_addr(overlayIP.c_str()); // convert overlayIP to binary format
 
@@ -40,7 +36,7 @@ void insertNode(struct TrieNode *root, string overlayIP, string realIP, int node
     root->nodeID = nodeID;
 }
 // Searches Trie for overlayIP and returns best destIP
-string searchTrie(struct TrieNode *root, string overlayIP)
+std::string searchTrie(struct TrieNode *root, std::string overlayIP)
 {
     in_addr_t bin_overlay = inet_addr(overlayIP.c_str()); // convert overlayIP to binary format
 
@@ -56,7 +52,7 @@ string searchTrie(struct TrieNode *root, string overlayIP)
 }
 
 // Override for searchTrie above that includes nodeID
-int searchTrieForNode(struct TrieNode *root, string overlayIP)
+int searchTrieForNode(struct TrieNode *root, std::string overlayIP)
 {
     in_addr_t bin_overlay = inet_addr(overlayIP.c_str()); // convert overlayIP to binary format
 
