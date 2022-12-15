@@ -15,6 +15,8 @@ End-Hosts:
 host4 (8117) 10.63.30.4, 10.63.30.5, 10.63.30.6
 
 
+MUST SET IP ADDRESSES USING 'sudo ip addr add <IP> dev ens3' EACH TIME
+
 To Use: (set up routers first on host4, then end-hosts)
 run 'make clean'
 run 'make relay'

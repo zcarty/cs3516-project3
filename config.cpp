@@ -108,15 +108,15 @@ fromConfig config(int nodeID)
         break;
     case 4:
         out.type = 2;
-        routers[0];
+        out.router_ip = routers[0];
         break;
     case 5:
         out.type = 2;
-        routers[1];
+        out.router_ip = routers[0];
         break;
     case 6:
         out.type = 2;
-        routers[2];
+        out.router_ip = routers[0];
         break;
 
     default:
