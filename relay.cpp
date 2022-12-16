@@ -22,14 +22,15 @@ int main(int argc, char **argv)
     int socket = 0;
     // defining buffers
     char SRC_BUFF[2001]; // additional byte to allow for space for null terminator
-    char PAY_BUFF[2001]; // payload buffer, size can be adjusted later
-    char ERR_BUFF[2001];
+    char PAY_BUFF[1001]; // payload buffer, size can be adjusted later
+    char ERR_BUFF[1001];
 
     unsigned magic_num = 0xFF10483C; // special packet designation indicating filesize
 
     // run the file with cmd args (nodeID)
     if (data.type == 1) // Router
     {
+        printf("RELAY INSTANCE DESIGNATED AS ROUTER\n");
         // create socket s_addr change for multiple ips on one vm
         std::cout << "Creating socket at ip: " << data.ip_host << "...";
         socket = create_cs3516_socket(data.ip_host);
@@ -187,6 +188,7 @@ int main(int argc, char **argv)
 
     else // End Host
     {
+        printf("RELAY INSTANCE DESIGNATED AS END HOST\n");
         std::cout << "Creating socket at ip: " << data.ip_host << "...";
         socket = create_cs3516_socket(data.ip_host);
         std::cout << "done." << std::endl;
@@ -247,6 +249,7 @@ int main(int argc, char **argv)
                     memcpy(&iphead, SRC_BUFF, sizeof(struct ip));
                     memcpy(&udphead, SRC_BUFF + sizeof(struct ip), sizeof(struct udphdr));
                     memcpy(PAY_BUFF, SRC_BUFF + sizeof(struct ip) + sizeof(struct udphdr), (udphead.uh_ulen - sizeof(struct udphdr)));
+                    printf("%s\n", PAY_BUFF);
                     received << PAY_BUFF;
                 }
                 received << std::endl
