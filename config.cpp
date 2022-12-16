@@ -127,64 +127,64 @@ fromConfig config(int nodeID)
     return out;
 }
 
-// bool enqueue(fromConfig data, char *buffer, std::string ip_dest, int id_node)
-// {
-//     // if (queue == NULL)
-//     // {
-//     //     // queue = (char *)malloc(data.queueLength * (2001));
-//     //     // qid = (int *)malloc(data.queueLength * sizeof(int));
-//     //     // qdest = (std::string *)malloc(data.queueLength * sizeof(std::string));
-//     //     for (int i = 0; i < 7; i++)
-//     //     {
-//     //         action_report[i].tv_sec = -1;
-//     //         action_report[i].tv_usec = -1;
-//     //     }
-//     // }
-//     // if (q_count >= data.queueLength)
-//     //     return false;
-//     // else
-//     // {
-//     //     int index = (q_start + q_count) % data.queueLength;
-//     //     memcpy((queue + 2001 * index), buffer, 2001);
-//     //     qid[index] = id_node;
-//     //     qdest[index] = ip_dest;
-//     // } // figure out how to implement packet transmission delays, not necessarily but maybe here
+bool enqueue(fromConfig data, char *buffer, std::string ip_dest, int id_node)
+{
+    if (queue == NULL)
+    {
+        queue = (char *)malloc(data.queueLength * (2001));
+        qid = (int *)malloc(data.queueLength * sizeof(int));
+        qdest = (std::string *)malloc(data.queueLength * sizeof(std::string));
+        for (int i = 0; i < 7; i++)
+        {
+            action_report[i].tv_sec = -1;
+            action_report[i].tv_usec = -1;
+        }
+    }
+    if (q_count >= data.queueLength)
+        return false;
+    else
+    {
+        int index = (q_start + q_count) % data.queueLength;
+        memcpy((queue + 2001 * index), buffer, 2001);
+        qid[index] = id_node;
+        qdest[index] = ip_dest;
+    } // figure out how to implement packet transmission delays, not necessarily but maybe here
 
-//     return true;
-// }
+    return true;
+}
 
-// void processQueue(int socket, fromConfig data)
-// {
-//     struct timeval t;
-//     if (queue == NULL)
-//         return;
-//     for (int i = 0; i < q_count; i++)
-//     {
-//         int index = (q_start + i) % data.queueLength;
-//         gettimeofday(&t, NULL);
-//         int diff_secs = t.tv_sec - action_report[qid[index]].tv_sec;
-//         int diff_usec = t.tv_usec - action_report[qid[index]].tv_usec;
-//         diff_usec += diff_secs * 1e6;
-//         if (action_report[qid[index]].tv_sec < 0 || diff_usec / 1000 >= data.delay[qid[index]])
-//         {
-//             struct udphdr info;
-//             memcpy(&info, (queue + 2001 * index + sizeof(struct ip)), sizeof(struct udphdr));
-//             cs3516_send(socket, (queue + 2001 * index), (info.uh_ulen + sizeof(struct ip)), qdest[index]);
-//             action_report[qid[index]].tv_sec = t.tv_sec;
-//             action_report[qid[index]].tv_usec = t.tv_usec;
+void processQueue(int socket, fromConfig data)
+{
+    struct timeval t;
+    if (queue == NULL)
+        return;
+    for (int i = 0; i < q_count; i++)
+    {
+        int index = (q_start + i) % data.queueLength;
+        gettimeofday(&t, NULL);
+        int diff_secs = t.tv_sec - action_report[qid[index]].tv_sec;
+        int diff_usec = t.tv_usec - action_report[qid[index]].tv_usec;
+        diff_usec += diff_secs * 1e6;
+        if (action_report[qid[index]].tv_sec < 0 || diff_usec / 1000 >= data.delay[qid[index]])
+        {
+            struct udphdr info;
+            memcpy(&info, (queue + 2001 * index + sizeof(struct ip)), sizeof(struct udphdr));
+            cs3516_send(socket, (queue + 2001 * index), (info.uh_ulen + sizeof(struct ip)), qdest[index]);
+            action_report[qid[index]].tv_sec = t.tv_sec;
+            action_report[qid[index]].tv_usec = t.tv_usec;
 
-//             for (int j = i - 1; j < q_count; j++)
-//             {
-//                 int index2 = (q_start + j) % data.queueLength;
-//                 index = (q_start + j - 1) % data.queueLength;
+            for (int j = i - 1; j < q_count; j++)
+            {
+                int index2 = (q_start + j) % data.queueLength;
+                index = (q_start + j - 1) % data.queueLength;
 
-//                 memcpy((queue + 2001 * index), (queue + 2001 * index2), 2001);
-//                 qid[index] = qid[index2];
-//                 qdest[index] = qdest[index2];
-//             }
-//             q_count--;
-//             processQueue(socket, data);
-//             return;
-//         }
-//     }
-// }
+                memcpy((queue + 2001 * index), (queue + 2001 * index2), 2001);
+                qid[index] = qid[index2];
+                qdest[index] = qdest[index2];
+            }
+            q_count--;
+            processQueue(socket, data);
+            return;
+        }
+    }
+}
