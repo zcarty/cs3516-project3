@@ -5,3 +5,6 @@ relay: relay.cpp router.cpp config.cpp cs3516sock.cpp
 
 clean:
 	rm -f relay test a.out
+
+remove:
+	rm -f received received_stats.txt

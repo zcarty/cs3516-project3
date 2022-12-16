@@ -1,13 +1,17 @@
-#include "config.cpp"
-#include "router.cpp"
-#include "cs3516sock.cpp"
+// #include "config.cpp"
+// #include "router.cpp"
+// #include "cs3516sock.cpp"
 #include "include.h"
 using namespace std;
 
 int main(void)
 {
-    fromConfig data = config(1);
+    char PAY_BUFF[] = {"HELLO"};
 
-    std::string destIP = searchTrie(&data.root, "4.5.6.1");
-    cout << "dest ip " << destIP << endl;
+
+    char rec_message[1000];
+    sscanf(PAY_BUFF, "%s", &rec_message);
+
+    cout << "Receieved message: " << rec_message;
+
 }
