@@ -21,7 +21,8 @@ run 'make clean'
 run 'make relay'
 run './relay <NODEID>' (making sure the config.txt and other required files are present in directory)
 
-A end-host will check for send_config and send_body every 0.5 seconds,
+A end-host will check for send_config.txt and send_body.txt every 0.5 seconds,
     if found, the host will send required packets, then clear both files
     to send a new file while the host is listening, write send_config and 
-    send_body in another directory, then copy into Host folder
+    send_body in another directory, then copy into Host folder.
+    if not found, user will need to create manually.
