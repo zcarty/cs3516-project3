@@ -24,6 +24,7 @@ int main(int argc, char **argv)
     char SRC_BUFF[2001]; // additional byte to allow for space for null terminator
     char PAY_BUFF[1001]; // payload buffer, size can be adjusted later
     char ERR_BUFF[1001];
+    // char FILE_CONTENTS[10000];
 
     unsigned magic_num = 0xFF10483C; // special packet designation indicating filesize
 
@@ -48,10 +49,10 @@ int main(int argc, char **argv)
         std::ofstream logfile;
         struct timeval UNIX_TIME;
 
+        int queue = 0;
+
         while (1)
         {
-            // Iterate through queue
-            processQueue(socket, data);
 
             FD_ZERO(&readfds);
             FD_ZERO(&writefds);
@@ -75,6 +76,7 @@ int main(int argc, char **argv)
             sscanf(PAY_BUFF, "%d", &filesize);
             cout << "filesize: " << filesize;
             int packet_num = ((filesize - 1) / 1000) + 1;
+            queue = +packet_num;
 
             // Find destination and forward file-size packet to that destination
             std::string destIP = searchTrie(&data.root, inet_ntoa(iphead.ip_dst));
@@ -112,7 +114,7 @@ int main(int argc, char **argv)
             else
             {
                 iphead.ip_ttl--;
-                // memcpy(SRC_BUFF, &iphead, sizeof(struct ip));
+                memcpy(SRC_BUFF, &iphead, sizeof(struct ip));
 
                 // TODO: Figure out what next hop is before enqueue, and drop packet if no route is resolved
                 std::string destIP = searchTrie(&data.root, inet_ntoa(iphead.ip_dst));
@@ -145,44 +147,76 @@ int main(int argc, char **argv)
                     destNode = data.destID;
                 }
 
-                // QUEUE DROPPING
-                if (enqueue(data, SRC_BUFF, destIP, destNode))
+                for (int i = 0; i < packet_num; i++)
                 {
-                    gettimeofday(&UNIX_TIME, NULL);
+                    // Receive Packet
+                    int bytes_recvd = cs3516_recv(socket, SRC_BUFF, (sizeof(SRC_BUFF) - 1));
 
-                    logfile.open(filename);
-                    logfile << UNIX_TIME.tv_sec << "." << (UNIX_TIME.tv_usec / 1000) << "  "
-                            << inet_ntoa(iphead.ip_src) << "  "
-                            << inet_ntoa(iphead.ip_dst) << "  "
-                            << iphead.ip_id << "  "
-                            << "SENT_OKAY"
-                            << "  "
-                            << destIP << std::endl;
-                    cout << UNIX_TIME.tv_sec << "." << (UNIX_TIME.tv_usec / 1000) << "  "
-                         << inet_ntoa(iphead.ip_src) << "  "
-                         << inet_ntoa(iphead.ip_dst) << "  "
-                         << iphead.ip_id << "  "
-                         << "SENT_OKAY"
-                         << "  "
-                         << destIP << std::endl;
-                    logfile.close();
-                }
-                else
-                {
-                    gettimeofday(&UNIX_TIME, NULL);
+                    if (bytes_recvd == -1)
+                    {
+                        cout << "Dropped packet from " << inet_ntoa(iphead.ip_src) << endl;
+                    }
 
-                    logfile.open(filename);
-                    logfile << UNIX_TIME.tv_sec << "." << (UNIX_TIME.tv_usec / 1000) << "  "
-                            << inet_ntoa(iphead.ip_src) << "  "
-                            << inet_ntoa(iphead.ip_dst) << "  "
-                            << iphead.ip_id << "  "
-                            << "MAX_SENDQ_EXCEEDED" << std::endl;
-                    cout << UNIX_TIME.tv_sec << "." << (UNIX_TIME.tv_usec / 1000) << "  "
-                         << inet_ntoa(iphead.ip_src) << "  "
-                         << inet_ntoa(iphead.ip_dst) << "  "
-                         << iphead.ip_id << "  "
-                         << "MAX_SENDQ_EXCEEDED" << std::endl;
-                    logfile.close();
+                    struct ip iphead;
+                    struct udphdr udphead;
+                    memcpy(&iphead, SRC_BUFF, sizeof(struct ip));
+                    memcpy(&udphead, SRC_BUFF + sizeof(struct ip), sizeof(struct udphdr));
+                    memcpy(PAY_BUFF, SRC_BUFF + sizeof(struct ip) + sizeof(struct udphdr), (udphead.uh_ulen - sizeof(struct udphdr)));
+                    queue++;
+
+                    // QUEUE DROPPING
+                    if (queue <= data.queueLength)
+                    {
+
+                        // Send packet
+                        queue--;
+                        if (destIP == data.ip_host)
+                        { // send direct to end-host
+                            fromConfig destinationData = config(data.destID);
+                            cs3516_send(socket, SRC_BUFF, recv_output, destinationData.ip_host);
+                            cout << "done." << endl;
+                        }
+                        else
+                        { // forward to another router
+                            cs3516_send(socket, SRC_BUFF, recv_output, destIP);
+                        }
+
+                        gettimeofday(&UNIX_TIME, NULL);
+
+                        logfile.open(filename);
+                        logfile << UNIX_TIME.tv_sec << "." << (UNIX_TIME.tv_usec / 1000) << "  "
+                                << inet_ntoa(iphead.ip_src) << "  "
+                                << inet_ntoa(iphead.ip_dst) << "  "
+                                << iphead.ip_id << "  "
+                                << "SENT_OKAY"
+                                << "  "
+                                << destIP << std::endl;
+                        cout << UNIX_TIME.tv_sec << "." << (UNIX_TIME.tv_usec / 1000) << "  "
+                             << inet_ntoa(iphead.ip_src) << "  "
+                             << inet_ntoa(iphead.ip_dst) << "  "
+                             << iphead.ip_id << "  "
+                             << "SENT_OKAY"
+                             << "  "
+                             << destIP << std::endl;
+                        logfile.close();
+                    }
+                    else
+                    {
+                        gettimeofday(&UNIX_TIME, NULL);
+
+                        logfile.open(filename);
+                        logfile << UNIX_TIME.tv_sec << "." << (UNIX_TIME.tv_usec / 1000) << "  "
+                                << inet_ntoa(iphead.ip_src) << "  "
+                                << inet_ntoa(iphead.ip_dst) << "  "
+                                << iphead.ip_id << "  "
+                                << "MAX_SENDQ_EXCEEDED" << std::endl;
+                        cout << UNIX_TIME.tv_sec << "." << (UNIX_TIME.tv_usec / 1000) << "  "
+                             << inet_ntoa(iphead.ip_src) << "  "
+                             << inet_ntoa(iphead.ip_dst) << "  "
+                             << iphead.ip_id << "  "
+                             << "MAX_SENDQ_EXCEEDED" << std::endl;
+                        logfile.close();
+                    }
                 }
             }
         }
