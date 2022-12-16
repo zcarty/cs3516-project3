@@ -24,8 +24,8 @@ int main(int argc, char **argv)
     int socket = 0;
     // defining buffers
     char SRC_BUFF[2001]; // additional byte to allow for space for null terminator
-    char PAY_BUFF[2001]; // payload buffer, size can be adjusted later
-    char ERR_BUFF[2001];
+    char PAY_BUFF[1001]; // payload buffer, size can be adjusted later
+    char ERR_BUFF[1001];
 
     unsigned magic_num = 0xFF10483C; // special packet designation indicating filesize
 
