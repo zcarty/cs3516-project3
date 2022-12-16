@@ -30,6 +30,7 @@ int main(int argc, char **argv)
     // run the file with cmd args (nodeID)
     if (data.type == 1) // Router
     {
+        printf("RELAY INSTANCE DESIGNATED AS ROUTER\n");
         // create socket s_addr change for multiple ips on one vm
         std::cout << "Creating socket at ip: " << data.ip_host << "...";
         socket = create_cs3516_socket(data.ip_host);
@@ -187,6 +188,7 @@ int main(int argc, char **argv)
 
     else // End Host
     {
+        printf("RELAY INSTANCE DESIGNATED AS END HOST\n");
         std::cout << "Creating socket at ip: " << data.ip_host << "...";
         socket = create_cs3516_socket(data.ip_host);
         std::cout << "done." << std::endl;
@@ -243,6 +245,7 @@ int main(int argc, char **argv)
                     memcpy(&iphead, SRC_BUFF, sizeof(struct ip));
                     memcpy(&udphead, SRC_BUFF + sizeof(struct ip), sizeof(struct udphdr));
                     memcpy(PAY_BUFF, SRC_BUFF + sizeof(struct ip) + sizeof(struct udphdr), (udphead.uh_ulen - sizeof(struct udphdr)));
+                    printf("%s\n", PAY_BUFF);
                     received << PAY_BUFF;
                 }
                 received << std::endl
