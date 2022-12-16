@@ -40,7 +40,7 @@ int main(int argc, char **argv)
 
         struct timeval tv;
         tv.tv_sec = 0;
-        tv.tv_usec = 10000; // 0.01 sec timeout
+        tv.tv_usec = 1000 * data.delay[data.destID]; // Timeout based off of delay
 
         char filename[] = "x_control.txt";
         filename[0] = nodeID + '0';
@@ -237,6 +237,10 @@ int main(int argc, char **argv)
                 for (int i = 0; i < packet_num; i++)
                 {
                     int bytes_recvd = cs3516_recv(socket, SRC_BUFF, (sizeof(SRC_BUFF) - 1));
+
+                    if (bytes_recvd == -1) {
+                        cout << "Dropped packet from " << inet_ntoa(iphead.ip_src) << endl;
+                    }
 
                     struct ip iphead;
                     struct udphdr udphead;

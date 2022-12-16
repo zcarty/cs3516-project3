@@ -1,10 +1,8 @@
 Zeb Carty and Michael McInerney
 
 Creates an overlay network with following features:
- Create appropriate headers
- Packet forwarding, queuing, and TTL processing
-
- Currently we have checkpoint numbers 1,2,3 and 7 completed
+ Creates appropriate headers
+ Packet forwarding, queueing, and TTL processing
 
 Router:
 host1 (8114) 10.63.30.1 nodeID 1
@@ -14,34 +12,16 @@ host3 (8116) 10.63.30.3 nodeID 3
 End-Hosts:
 host4 (8117) 10.63.30.4, 10.63.30.5, 10.63.30.6
 
-
-MUST SET IP ADDRESSES USING 'sudo ip addr add <IP> dev ens3' EACH TIME
+MUST SET IP ADDRESSES USING 'sudo ip addr add <IP> dev ens3' EACH TIME 
 
 To Use: (set up routers first on host4, then end-hosts)
+run 'sudo ip addr add 10.63.30.5/8 dev ens3'
+run 'sudo ip addr add 10.63.30.6/8 dev ens3'
 run 'make clean'
 run 'make relay'
 run './relay <NODEID>' (making sure the config.txt and other required files are present in directory)
 
- todo:
- set up vms with files and ips
-     // run the file with cmd args (1 for router, 2 for end host)
-    /* end host:
-    when run:
-    search for send_config.txt:
-    destIP(overlay) sourcePort destPort
-    search for send_body.txt:
-    divide the body into 1000 byte payloads and send to router
-
-    when receiving:
-    write stats to received_stats.txt
-    write contents to file called received
-    print to stdout size of transmitted file, # of packets transmitted
-                    size of received file, # of packets received
-    */
-
-    /* router:
-    call lookup function, which takes a destIP (overlay) and forwarding table returns new destIP(real)
-
-    write to log file (ROUTER_control.txt)
-    UNIXTIME SOURCE_OVERLAY_IP DEST_OVERLAY_IP IP_IDENT STATUS_CODE [NEXT_HOP]
-    */
+A end-host will check for send_config and send_body every 0.5 seconds,
+    if found, the host will send required packets, then clear both files
+    to send a new file while the host is listening, write send_config and 
+    send_body in another directory, then copy into Host folder
